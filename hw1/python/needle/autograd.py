@@ -1,9 +1,10 @@
 """Core data structures."""
 import needle
 from .backend_numpy import Device, cpu, all_devices
-from typing import List, Optional, NamedTuple, Tuple, Union, Dict
+from typing import List, Optional, NamedTuple, Tuple, Union
 from collections import namedtuple
 import numpy
+import copy
 
 from needle import init
 
@@ -379,9 +380,16 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     # Traverse graph in reverse topological order given the output_node that we are taking gradient wrt.
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    for node in reverse_topo_order:
+        # sum up partial ajoints
+        node.grad = sum_node_list(node_to_output_grads_list[node])
+        if node.op is None:
+            continue
+        partial_ajoints = node.op.gradient_as_tuple(node.grad, node)
+        for in_node, partial_ajoint in zip(node.inputs, partial_ajoints):
+            if in_node not in node_to_output_grads_list:
+                node_to_output_grads_list[in_node] = []
+            node_to_output_grads_list[in_node].append(partial_ajoint)
 
 
 def find_topo_sort(node_list: List[Value]) -> List[Value]:
@@ -392,16 +400,20 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     after all its predecessors are traversed due to post-order DFS, we get a topological
     sort.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    topo_order = []
+    for node in node_list:
+        print(node.inputs)
+        topo_sort_dfs(node, topo_order)
+    return topo_order
 
 
-def topo_sort_dfs(node, visited, topo_order):
+def topo_sort_dfs(node, topo_order):
     """Post-order DFS"""
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    if node in topo_order:
+        return
+    for in_node in node.inputs:
+        topo_sort_dfs(in_node, topo_order)
+    topo_order.append(node)
 
 
 ##############################

@@ -10,7 +10,7 @@ sys.path.append("python/")
 import needle as ndl
 
 
-def parse_mnist(image_filename, label_filename):
+def parse_mnist(image_filesname, label_filename):
     """Read an images and labels file in MNIST format.  See this page:
     http://yann.lecun.com/exdb/mnist/ for a description of the file format.
 
@@ -32,9 +32,25 @@ def parse_mnist(image_filename, label_filename):
                 labels of the examples.  Values should be of type np.int8 and
                 for MNIST will contain the values 0-9.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    with gzip.open(image_filesname, "rb") as f_img:
+        magic, num_images, rows, cols = struct.unpack(">IIII", f_img.read(16))
+        if magic != 2051:
+            raise ValueError(f"Invalid image magic number: {magic}")
+        img_bytes = f_img.read(num_images * rows * cols)
+        X = np.frombuffer(img_bytes, dtype=np.uint8).reshape(num_images, rows * cols)
+        X = (X.astype(np.float32) / 255.0)
+
+    with gzip.open(label_filename, "rb") as f_lbl:
+        magic, num_labels = struct.unpack(">II", f_lbl.read(8))
+        if magic != 2049:
+            raise ValueError(f"Invalid label magic number: {magic}")
+        y_bytes = f_lbl.read(num_labels)
+        y = np.frombuffer(y_bytes, dtype=np.uint8)
+
+    if num_images != num_labels:
+        raise ValueError(f"Image/label count mismatch: {num_images} vs {num_labels}")
+
+    return X, y
 
 
 def softmax_loss(Z, y_one_hot):
@@ -53,15 +69,15 @@ def softmax_loss(Z, y_one_hot):
     Returns:
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
-
+    batch_size = Z.shape[0]
+    logsumexp = ndl.log(ndl.exp(Z).sum(axes=(1,)))
+    correct_logits = (y_one_hot * Z).sum()
+    return (logsumexp.sum() - correct_logits) / batch_size
 
 def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     """Run a single epoch of SGD for a two-layer neural network defined by the
     weights W1 and W2 (with no bias terms):
-        logits = ReLU(X * W1) * W2
+        logits = ReLU(X * W1) * W1
     The function should use the step size lr, and the specified batch size (and
     again, without randomizing the order of X).
 
@@ -82,9 +98,31 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
             W2: ndl.Tensor[np.float32]
     """
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    num_iter = (y.size + batch - 1) // batch
+
+    for i in range(num_iter):
+        start = i * batch
+        end   = (i + 1) * batch
+
+        # Batch tensors
+        x_b = ndl.Tensor(X[start:end, :])
+        logits = ndl.relu(x_b.matmul(W1)).matmul(W2)
+
+        # One-hot labels (same logic, fixed size per loop)
+        y_b = y[start:end]
+        y_one_hot = np.zeros((batch, y.max() + 1))
+        y_one_hot[np.arange(batch), y_b] = 1
+        y_one_hot = ndl.Tensor(y_one_hot)
+
+        # Loss + backward
+        loss = softmax_loss(logits, y_one_hot)
+        loss.backward()
+
+        # SGD update (recreate tensors to detach from graph)
+        W1 = ndl.Tensor(W1.realize_cached_data() - lr * W1.grad.realize_cached_data())
+        W2 = ndl.Tensor(W2.realize_cached_data() - lr * W2.grad.realize_cached_data())
+
+    return W1, W2
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
