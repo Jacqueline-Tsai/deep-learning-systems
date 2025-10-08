@@ -24,9 +24,11 @@ class SGD(Optimizer):
         self.weight_decay = weight_decay
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        for i, p in enumerate(self.params):
+            p: ndl.Tensor = p
+            grad = (p.grad + self.weight_decay * p).detach()
+            self.u[i] = (self.momentum * self.u[i] + (1 - self.momentum) * grad).detach() if i in self.u else ((1 - self.momentum) * grad).detach()
+            p.data -= self.lr * self.u[i]
 
     def clip_grad_norm(self, max_norm=0.25):
         """
@@ -60,6 +62,13 @@ class Adam(Optimizer):
         self.v = {}
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.t += 1
+        for i, p in enumerate(self.params):
+            print(type(p))
+            grad = p.grad.detach() + self.weight_decay * p.detach()
+            
+            self.m[i] = self.beta1 * self.m.get(i, 0) + (1 - self.beta1) * grad
+            self.v[i] = self.beta2 * self.v.get(i, 0) + (1 - self.beta2) * (grad ** 2)
+            m_hat = self.m[i] / (1 - self.beta1 ** (self.t))
+            v_hat = self.v[i] / (1 - self.beta2 ** (self.t))
+            p.data -= self.lr * m_hat / ((v_hat ** 0.5) + self.eps)

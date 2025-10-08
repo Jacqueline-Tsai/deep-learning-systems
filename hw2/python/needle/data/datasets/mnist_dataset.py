@@ -1,6 +1,8 @@
 from typing import List, Optional
 from ..data_basic import Dataset
 import numpy as np
+import gzip
+import struct
 
 class MNISTDataset(Dataset):
     def __init__(
@@ -9,16 +11,23 @@ class MNISTDataset(Dataset):
         label_filename: str,
         transforms: Optional[List] = None,
     ):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        with gzip.open(image_filename, 'rb') as f:
+            image_bytes = f.read()
+            magic_number, num_images, rows, cols = struct.unpack(">iiii", image_bytes[:16])
+            pixels = struct.unpack("%dB" % (num_images * rows * cols), image_bytes[16:])
+            self.pixels = np.array(pixels, dtype=np.float32).reshape(num_images,  rows * cols) / 255
+        
+        with gzip.open(label_filename, 'rb') as f:
+            label_bytes = f.read()
+            magic_number, num_labels = struct.unpack(">ii", label_bytes[:8])
+            labels = struct.unpack("%dB" % num_labels, label_bytes[8:])
+            self.labels = np.array(labels, dtype=np.uint8)
+
+        self.transforms = transforms
 
     def __getitem__(self, index) -> object:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        X, y = self.pixels[index], self.labels[index]
+        return self.apply_transforms(X.reshape(28, 28, 1)).reshape(28 * 28), y            
 
     def __len__(self) -> int:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return self.pixels.shape[0]

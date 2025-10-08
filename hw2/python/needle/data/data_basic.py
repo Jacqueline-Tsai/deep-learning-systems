@@ -8,6 +8,7 @@ from typing import Iterator, Optional, List, Sized, Union, Iterable, Any
 class Dataset:
     r"""An abstract class representing a `Dataset`.
 
+
     All subclasses should overwrite :meth:`__getitem__`, supporting fetching a
     data sample for a given key. Subclasses must also overwrite
     :meth:`__len__`, which is expected to return the size of the dataset.
@@ -59,13 +60,15 @@ class DataLoader:
                                            range(batch_size, len(dataset), batch_size))
 
     def __iter__(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.idx = -1
+        if self.shuffle:
+            self.ordering = np.array_split(np.random.permutation(len(self.dataset)), range(self.batch_size, len(self.dataset), self.batch_size))
         return self
 
     def __next__(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.idx += 1
+        if self.idx >= len(self.ordering):
+            raise StopIteration
+        samples = self.dataset[self.ordering[self.idx]]
+        return [Tensor(x) for x in samples]
 

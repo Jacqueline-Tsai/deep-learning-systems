@@ -18,10 +18,7 @@ class RandomFlipHorizontal(Transform):
             H x W x C NDArray corresponding to image flipped with probability self.p
         Note: use the provided code to provide randomness, for easier testing
         """
-        flip_img = np.random.rand() < self.p
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return np.flip(img, axis=1) if np.random.rand() < self.p else img
 
 
 class RandomCrop(Transform):
@@ -37,6 +34,8 @@ class RandomCrop(Transform):
         Note: generate the image shifted by shift_x, shift_y specified below
         """
         shift_x, shift_y = np.random.randint(low=-self.padding, high=self.padding+1, size=2)
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        h, w = img.shape[:2]
+        new_img = np.zeros_like(img)
+        if abs(shift_x) >= h or abs(shift_y) >= w: return new_img
+        new_img[max(0, -shift_x):min(h - shift_x, h), max(0, -shift_y):min(w - shift_y, w), :] = img[max(0, shift_x):min(h + shift_x, h), max(0, shift_y):min(w + shift_y, w), :]
+        return new_img
